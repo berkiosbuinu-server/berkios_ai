@@ -6,6 +6,14 @@
 .env.test.local
 .env.*.local
 
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+
 # NE PAS inclure .env.example ici. Il doit être suivi par Git.
 
 # Dépendances
