@@ -112,7 +112,8 @@ class SelfLearningCorrectionLoop:
         )
 
         # Reuse the existing CorrectionMemory contract where possible.
-        self.memory.remember(
+        remember = getattr(self.memory, "remember_v4", self.memory.remember)
+        remember(
             error_id=capture.error_id,
             diagnosis=capture.diagnosis,
             files=capture.files,
@@ -147,6 +148,9 @@ class SelfLearningCorrectionLoop:
         symbols: Iterable[str] = (),
         limit: int = 5,
     ) -> list[dict[str, Any]]:
+        search = getattr(self.memory, "search_v4", None)
+        if callable(search):
+            return search(message=message, files=list(files), symbols=list(symbols), limit=limit)
         return self.memory.search(
             message=message,
             files=list(files),

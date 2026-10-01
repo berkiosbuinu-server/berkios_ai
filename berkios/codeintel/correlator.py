@@ -13,7 +13,9 @@ class ErrorCorrelator:
         path = (self.workspace / error.file).resolve()
         if self.workspace not in path.parents and path != self.workspace: return result
         try:
-            analysis = self.index.files.get(error.file) or self.index.index_file(error.file)
+            relative = path.relative_to(self.workspace).as_posix()
+            analysis = (self.index.files.get(error.file) or self.index.files.get(relative)
+                        or self.index.index_file(relative))
             data = analysis.to_dict() if hasattr(analysis, "to_dict") else analysis
             result["file_analysis"], result["imports"] = data, data.get("imports", [])
             if error.line:

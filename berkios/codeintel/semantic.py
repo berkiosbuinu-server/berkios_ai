@@ -18,6 +18,8 @@ class ProjectSemanticAnalyzer:
         return relations
 
     def summarize(self):
+        if not self.index.snapshot():
+            self.index.index_workspace()
         snap=self.index.snapshot()
         return {
             "files":len(snap),

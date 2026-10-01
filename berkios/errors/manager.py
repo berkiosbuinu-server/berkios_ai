@@ -21,7 +21,14 @@ class ErrorManager:
     def _store(self, events):
         for event in events:
             self.events.append(event)
-            self.diagnoses[event.id] = self.analyzer.analyze(event)
+            diagnosis = self.analyzer.analyze(event)
+            self.diagnoses[event.id] = diagnosis
+            if self.history is not None:
+                try:
+                    self.history.remember(event, diagnosis.to_dict())
+                except Exception:
+                    # Preserve error ingestion if optional persistence fails.
+                    pass
         return events
 
     def list(self):

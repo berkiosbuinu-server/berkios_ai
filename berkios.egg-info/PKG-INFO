@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: berkios
+Version: 5.29.0
+Summary: Local-first development agent runtime for iBook
+Requires-Python: >=3.11
+Requires-Dist: SQLAlchemy<3.0,>=2.0
+Requires-Dist: psycopg[binary]<4.0,>=3.2
+Requires-Dist: redis<7.0,>=5.0
+Requires-Dist: openai>=1.0.0

@@ -38,6 +38,13 @@ class JobWorker:
         worker_id: str | None = None,
     ):
         self.queue = queue
+        self.event_callback = None
+        # Legacy/simple mode: (queue, handlers, callback), no persistence.
+        if isinstance(persistence, Mapping):
+            if callable(handlers):
+                self.event_callback = handlers
+            handlers = persistence
+            persistence = None
         self.persistence = persistence
         self.handlers = dict(handlers or {})
         self.config = config or WorkerConfig()
@@ -45,6 +52,10 @@ class JobWorker:
             f"{socket.gethostname()}-{os.getpid()}-{uuid.uuid4().hex[:8]}"
         )
         self._stop = threading.Event()
+
+    def _notify(self, event, job):
+        if self.event_callback is not None:
+            self.event_callback(event, job)
 
     def stop(self) -> None:
         self._stop.set()
@@ -67,12 +78,29 @@ class JobWorker:
         job = self.queue.dequeue(timeout=self.config.poll_timeout_seconds)
         if job is None:
             return False
+        if isinstance(job, dict):
+            job = Job.from_dict(job)
 
-        if not self.persistence.claim_job(
-            job.id,
-            worker_id=self.worker_id,
-            lease_seconds=self.config.lease_seconds,
-        ):
+        if self.persistence is None:
+            self._notify("job.started", job)
+            try:
+                handler = self.handlers.get(job.kind)
+                if handler is None:
+                    raise KeyError(f"No handler registered for job kind: {job.kind}")
+                try:
+                    result = handler(job.payload)
+                except (TypeError, AttributeError):
+                    result = handler(job)
+                job.result = result
+                job.state = JobState.COMPLETED
+                self._notify("job.completed", job)
+            except Exception as exc:
+                job.error = str(exc)
+                job.state = JobState.FAILED
+                self._notify("job.failed", job)
+            return True
+        if not self.persistence.claim_job(job.id, worker_id=self.worker_id,
+                                          lease_seconds=self.config.lease_seconds):
             return True
 
         heartbeat = threading.Thread(

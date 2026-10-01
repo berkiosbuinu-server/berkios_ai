@@ -28,6 +28,8 @@ class ErrorParser:
                     source=source,
                     severity=ErrorSeverity.ERROR,
                     traceback=text,
+                    file=current.file if current else None,
+                    line=current.line if current else None,
                 ))
             elif line.startswith("ModuleNotFoundError:") or line.startswith("ImportError:"):
                 events.append(ErrorEvent(
@@ -35,6 +37,8 @@ class ErrorParser:
                     kind=ErrorKind.IMPORT,
                     source=source,
                     traceback=text,
+                    file=current.file if current else None,
+                    line=current.line if current else None,
                 ))
             elif line.startswith("TypeError:"):
                 events.append(ErrorEvent(
@@ -42,6 +46,8 @@ class ErrorParser:
                     kind=ErrorKind.TYPE,
                     source=source,
                     traceback=text,
+                    file=current.file if current else None,
+                    line=current.line if current else None,
                 ))
             elif line.startswith("AssertionError"):
                 events.append(ErrorEvent(
@@ -49,6 +55,8 @@ class ErrorParser:
                     kind=ErrorKind.TEST,
                     source=source,
                     traceback=text,
+                    file=current.file if current else None,
+                    line=current.line if current else None,
                 ))
         return events
 

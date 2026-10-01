@@ -57,6 +57,7 @@ class AgentRuntime:
         self.decision_integration = ProviderDecisionIntegration()
         self._persistence = None
         self._execution_control = None
+        self._runtime_states = {}
         self._approval_center = None
         self._live_bridge = None
 
@@ -102,6 +103,30 @@ def create_provider_agent(self, max_iterations=3):
 
 AgentRuntime.create_provider_agent = create_provider_agent
 
+def transition(self, run_id, state, **detail):
+    from .agent_runtime import RuntimeState
+    state = RuntimeState(state)
+    self._runtime_states[run_id] = state
+    run = self.runs.get(run_id)
+    if run is not None:
+        setattr(run, "runtime_state", state)
+        events = getattr(run, "events", None)
+        if isinstance(events, list):
+            events.append({"type": "run.transition", "state": state.value, "detail": detail})
+    return run
+
+AgentRuntime.transition = transition
+
+def record_decision(self, run_id, decision):
+    run = self.runs.get(run_id)
+    if run is not None:
+        if not hasattr(run, "decisions"):
+            run.decisions = []
+        run.decisions.append(decision)
+    return run
+
+AgentRuntime.record_decision = record_decision
+
 def create_action_planner(self):
     from .action_planning import RuntimeActionPlanner
     return RuntimeActionPlanner(self)
@@ -133,6 +158,14 @@ def create_execution_control(self):
     return self._execution_control
 
 AgentRuntime.create_execution_control = create_execution_control
+
+def create_persistence(self, database_url=None, redis_url=None):
+    if self._persistence is None:
+        from .persistence import RuntimePersistence
+        self._persistence = RuntimePersistence(database_url=database_url, redis_url=redis_url, workspace=str(self.workspace))
+    return self._persistence
+
+AgentRuntime.create_persistence = create_persistence
 
 def create_live_bridge(self):
     if self._live_bridge is None:

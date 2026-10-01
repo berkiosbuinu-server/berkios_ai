@@ -39,12 +39,15 @@ class ExecutionController:
         if self.persistence is None:
             return
         try:
-            self.persistence.record_run(
-                run.run_id,
-                run.state.value,
-                {"run": run.to_dict()},
-                str(getattr(self.persistence, "workspace", "")) or None,
-            )
+            record = getattr(self.persistence, "record_run", None)
+            if callable(record):
+                record(run.run_id, run.state.value, {"run": run.to_dict()},
+                       str(getattr(self.persistence, "workspace", "")) or None)
+            else:
+                repository = getattr(self.persistence, "repository", None)
+                if repository is not None:
+                    repository.upsert_run(run.run_id, run.state.value, {"run": run.to_dict()},
+                                          str(getattr(self.persistence, "workspace", "")) or None)
         except Exception:
             # Runtime execution must not become unavailable solely because
             # the optional persistence backend is temporarily down.

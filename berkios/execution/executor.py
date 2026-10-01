@@ -63,6 +63,10 @@ class ToolExecutor:
             )
 
         handler = self.handlers.get(step.capability)
+        if handler is None and step.capability == "context.read":
+            # Context preparation is performed by the planner/runtime; this
+            # marker step has no side effect and can satisfy downstream deps.
+            return ToolResult(step.id, True, ExecutionState.COMPLETED, output={"ok": True})
         if handler is None:
             return ToolResult(
                 step.id, False, ExecutionState.FAILED,

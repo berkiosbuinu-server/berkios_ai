@@ -76,8 +76,22 @@ class CodixDatasetFactory:
         rng.shuffle(items)
 
         n = len(items)
-        train_end = int(n * train_ratio)
-        val_end = train_end + int(n * validation_ratio)
+        ratios = [train_ratio, validation_ratio, test_ratio]
+        counts = [int(n * r) for r in ratios]
+        # Allocate remainder by largest fractional part (stable split order).
+        remainder = n - sum(counts)
+        order = sorted(range(3), key=lambda i: (n * ratios[i] - counts[i], -i), reverse=True)
+        for i in order[:remainder]:
+            counts[i] += 1
+        # When enough examples exist, avoid silently emptying a requested split.
+        for i, ratio in enumerate(ratios):
+            if ratio > 0 and n >= sum(r > 0 for r in ratios) and counts[i] == 0:
+                donor = max((j for j in range(3) if counts[j] > 1), key=lambda j: counts[j], default=None)
+                if donor is not None:
+                    counts[donor] -= 1
+                    counts[i] += 1
+        train_end = counts[0]
+        val_end = train_end + counts[1]
 
         examples: list[DatasetExample] = []
         for i, c in enumerate(items):
