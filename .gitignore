@@ -5,6 +5,8 @@
 .env.development.local
 .env.test.local
 .env.*.local
+*.db
+*.zip
 
 # Cache Python
 __pycache__/
