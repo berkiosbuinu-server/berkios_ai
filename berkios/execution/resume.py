@@ -1,6 +1,6 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Any
 
 from .models import ExecutionState
 
@@ -24,22 +24,37 @@ class ResumePoint:
 
 
 class ExecutionResumer:
-    """Calcule et reprend un run sans rejouer les étapes terminées."""
+    """Calcule les points de reprise sans exécuter d'outil."""
 
-    def checkpoint(self, run, plan) -> ResumePoint:
-        completed = []
-        blocked = []
-        for result in run.results:
-            if result.get("success"):
-                completed.append(result["step_id"])
-            elif result.get("state") in {
-                "blocked", "waiting_approval"
-            }:
-                blocked.append(result["step_id"])
+    def checkpoint(self, run, plan):
+        completed = [
+            result["step_id"]
+            for result in run.results
+            if result.get("success")
+        ]
+
+        blocked = [
+            result["step_id"]
+            for result in run.results
+            if result.get("state")
+            in {
+                "blocked",
+                "waiting_approval",
+            }
+        ]
+
+        completed_set = set(completed)
 
         next_step = None
+
         for step in plan.steps:
-            if step.id not in completed:
+            if step.id in completed_set:
+                continue
+
+            if all(
+                dependency in completed_set
+                for dependency in step.depends_on
+            ):
                 next_step = step.id
                 break
 
@@ -48,16 +63,37 @@ class ExecutionResumer:
             next_step_id=next_step,
             completed_steps=completed,
             blocked_steps=blocked,
-            reason="reprise après checkpoint",
+            reason=(
+                "reprise après approbation"
+                if run.state.value == "waiting_approval"
+                else "point de reprise"
+            ),
         )
 
     def ready_steps(self, run, plan):
         completed = {
-            r["step_id"] for r in run.results if r.get("success")
+            result["step_id"]
+            for result in run.results
+            if result.get("success")
         }
+
         return [
-            step for step in plan.steps
+            step
+            for step in plan.steps
             if step.id not in completed
-            and step.state == ExecutionState.READY
-            and all(dep in completed for dep in step.depends_on)
+            and all(
+                dependency in completed
+                for dependency in step.depends_on
+            )
         ]
+
+    def prepare_resume(self, run, plan):
+        for step in plan.steps:
+            if step.state == ExecutionState.WAITING_APPROVAL:
+                step.state = ExecutionState.READY
+                step.reason = ""
+
+        return self.ready_steps(
+            run,
+            plan,
+        )

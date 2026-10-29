@@ -48,7 +48,7 @@ services:
     environment:
       BERKIOS_ENV: production
       BERKIOS_HOST: 0.0.0.0
-      BERKIOS_PORT: 8000
+      BERKIOS_PORT: 8765
       BERKIOS_REDIS_URL: redis://redis:6379/0
       BERKIOS_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     depends_on:
@@ -59,15 +59,17 @@ services:
     volumes:
       - berkios_data:/var/lib/berkios
     expose:
-      - "8000"
+      - "8765"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/health', timeout=3).read()"]
       interval: 20s
       timeout: 5s
       retries: 5
     networks: [berkios_net]
 
   worker:
+    healthcheck:
+      disable: true
     build:
       context: .
       dockerfile: Dockerfile
@@ -95,14 +97,13 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    ports:
-      - "80:80"
-      - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certbot/www:/var/www/certbot:ro
       - ./certbot/conf:/etc/letsencrypt:ro
-    networks: [berkios_net]
+    networks:
+      - berkios_net
+      - medigest_medigest_net
 
 volumes:
   postgres_data:
@@ -112,3 +113,6 @@ volumes:
 networks:
   berkios_net:
     name: berkios_net
+
+  medigest_medigest_net:
+    external: true

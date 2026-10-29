@@ -151,7 +151,7 @@ def recover_expired_jobs(
     one worker/process; the persistence layer must atomically transition an
     expired running job back to queued.
     """
-    jobs = persistence.requeue_expired_jobs(limit=limit)
+    jobs = persistence.recover_expired_jobs()[:limit]
     count = 0
     for job in jobs:
         queue.enqueue(job)

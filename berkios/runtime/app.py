@@ -1,3 +1,4 @@
+import os
 from berkios.graph.builder import ProjectGraphBuilder
 from berkios.lsp.service import LSPService
 from pathlib import Path
@@ -56,6 +57,7 @@ class AgentRuntime:
         self.runs = {}
         self.decision_integration = ProviderDecisionIntegration()
         self._persistence = None
+        self._job_queue = None
         self._execution_control = None
         self._runtime_states = {}
         self._approval_center = None
@@ -188,6 +190,23 @@ def create_execution_resumer(self):
     return RuntimeExecutionResumer(self)
 
 AgentRuntime.create_execution_resumer = create_execution_resumer
+
+
+def create_job_queue(self):
+    if self._job_queue is None:
+        from .job_queue import RuntimeJobQueue
+        from berkios.queue.job_handlers import build_job_handlers
+
+        self._job_queue = RuntimeJobQueue(
+            redis_url=os.getenv("BERKIOS_REDIS_URL"),
+            handlers=build_job_handlers(self),
+            repository=self.create_persistence().repository,
+        )
+
+    return self._job_queue
+
+
+AgentRuntime.create_job_queue = create_job_queue
 
 def create_codix_learning(self):
     from .codix_learning import RuntimeCodixLearning

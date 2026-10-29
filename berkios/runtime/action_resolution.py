@@ -1,13 +1,21 @@
+
 from __future__ import annotations
+
 from berkios.actionplan import CapabilityResolver
 
 
 class RuntimeActionResolver:
+    """Adaptateur runtime vers le vrai ToolRegistry."""
+
     def __init__(self, runtime):
         self.runtime = runtime
+
+        registry = getattr(runtime, "tools", None)
+        permissions = getattr(registry, "permissions", None)
+
         self.resolver = CapabilityResolver(
-            getattr(runtime, "capabilities", None),
-            getattr(runtime, "permissions", None),
+            registry=registry,
+            permissions=permissions,
         )
 
     def resolve(self, plan):

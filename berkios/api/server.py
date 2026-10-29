@@ -476,7 +476,13 @@ def create_server(runtime, host="127.0.0.1", port=8765):
     Handler.runtime = runtime
     return ThreadingHTTPServer((host, port), Handler)
 
-def serve(runtime, host="127.0.0.1", port=8765):
+
+def serve(runtime, host=None, port=None):
+    import os
+
+    host = host or os.getenv("BERKIOS_HOST", "127.0.0.1")
+    port = port or int(os.getenv("BERKIOS_PORT", "8765"))
+
     server = create_server(runtime, host, port)
-    print(f"Berkios 2.1 API: http://{host}:{port}")
+    print(f"Berkios 2.1 API: http://{host}:{port}", flush=True)
     server.serve_forever()
